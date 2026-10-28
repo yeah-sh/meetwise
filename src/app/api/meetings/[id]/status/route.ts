@@ -1,4 +1,4 @@
-// GET /api/meetings/[id]/status: { status, errorMessage }, polled by the upload page.
+// GET /api/meetings/[id]/status: { status, errorMessage }, polled by the upload page and the meeting page.
 import { prisma } from "@/lib/db";
 import { failIfInterrupted } from "@/lib/process-meeting";
 import { isValidMeetingId } from "@/lib/validation";
