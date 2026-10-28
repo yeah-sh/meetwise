@@ -8,13 +8,17 @@ import { deleteUpload, saveUpload } from "@/lib/storage";
 import { checkUploadRequestSize, validateAudioUpload, validateTitle } from "@/lib/validation";
 import type { ApiError, ProcessingStarted } from "@/types";
 
+function fail(status: number, error: string) {
+  return Response.json({ error } satisfies ApiError, { status });
+}
+
 function badRequest(error: string) {
-  return Response.json({ error } satisfies ApiError, { status: 400 });
+  return fail(400, error);
 }
 
 export async function POST(request: Request) {
   const sizeError = checkUploadRequestSize(request);
-  if (sizeError) return badRequest(sizeError);
+  if (sizeError) return fail(413, sizeError);
 
   let form: FormData;
   try {

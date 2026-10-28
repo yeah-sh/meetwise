@@ -42,7 +42,7 @@ Langflow's built-in Groq model needs the `langchain-groq` package, which **this 
 2. **Base URL:** `https://api.groq.com/openai/v1`
 3. **API Key:** your Groq key. Save. Langflow stores these as the global variables `OPENAI_COMPATIBLE_BASE_URL` and `OPENAI_COMPATIBLE_API_KEY`.
 
-Model to use in both flows: **`llama-3.3-70b-versatile`** (128k-token context, good at following instructions).
+Model to use in both flows: **`openai/gpt-oss-120b`** (128k-token context), with **Temperature** `0.1`. Any current Groq production chat model also works (see https://console.groq.com/docs/models); pick it under **OpenAI Compatible** in both flows. The flows stay the same.
 
 > **Groq free tier.** Groq limits tokens per minute for each model. A one-hour meeting produces a transcript of roughly 10,000 to 15,000 tokens, and the Q&A flow sends the whole transcript with every question. Long meetings can fail with a "request too large" or rate-limit (HTTP 413/429) error. Check your limits at https://console.groq.com/settings/limits. If you hit them, choose a model with a higher limit or upgrade your Groq plan. You can also use any other provider listed under Model Providers; the flows stay the same.
 
@@ -102,7 +102,7 @@ Shape: **Transcript Input → Report Prompt → Language Model → Report Output
    - Leave **Use Double Brackets** (under the node's controls) **off**.
    - The JSON example in the prompt uses doubled braces `{{ }}` on purpose. In this mode, single braces mark variables such as `{transcript}`, and doubled braces mean a literal brace. Langflow sends the model single braces. Don't "fix" them.
 4. Connect **Transcript Input → Output Text** to **Report Prompt → transcript**.
-5. **Add a Language Model.** Pick `llama-3.3-70b-versatile` under **OpenAI Compatible**. In its controls, set **Temperature** to `0.1` and leave **Stream** off. Connect **Report Prompt → Prompt** to **Language Model → Input**, and leave **System Message** empty.
+5. **Add a Language Model.** Pick `openai/gpt-oss-120b` under **OpenAI Compatible**. In its controls, set **Temperature** to `0.1` and leave **Stream** off. Connect **Report Prompt → Prompt** to **Language Model → Input**, and leave **System Message** empty.
 6. **Add a Text Output** and rename it `Report Output`. Connect **Language Model → Model Response** to **Report Output → Inputs**.
 7. **Test it.** Paste a few lines of sample transcript into **Transcript Input**, run **Report Output**, and check that the output is a single JSON object.
 
@@ -139,7 +139,7 @@ Meeting Q&A Prompt ───────► Language Model (Input) ───► 
    - **Chat Input → Chat Message** to **Meeting Q&A Prompt → question**
    - **Message History → Messages** to **Meeting Q&A Prompt → history**
    - Leave **transcript** and **summary** unconnected. The app fills them on every request. A field with a connection ignores tweaks, so these two must stay unconnected.
-6. **Add a Language Model** with the same model. Set **Temperature** to `0.2` and leave **Stream** off. Connect **Meeting Q&A Prompt → Prompt** to **Language Model → Input**, and leave **System Message** empty.
+6. **Add a Language Model** with the same model. Set **Temperature** to `0.1` and leave **Stream** off. Connect **Meeting Q&A Prompt → Prompt** to **Language Model → Input**, and leave **System Message** empty.
 7. **Add a Chat Output** and rename it `Answer Output`. Connect **Language Model → Model Response** to **Answer Output → Inputs**. Keep **Store Messages** on, because that is how answers are saved to memory.
 8. **Test it.** Paste a short sample transcript and summary into the **transcript** and **summary** fields. Open the **Playground** and ask a question, then a follow-up such as "who is doing that?" to check that memory works. Also ask about something that is not in the sample, and check that the reply says it was not discussed. Clear or shorten the sample text afterwards if you like, because the app's tweaks replace it on every request.
 
@@ -178,7 +178,7 @@ Do this for each flow:
    - Transcribe: **Audio File** on **Groq Whisper Transcriber**
    - Meeting Q&A: **transcript** and **summary** on **Meeting Q&A Prompt**
 
-   The code sample then shows a `tweaks` block keyed by the component ID, for example `"CustomComponent-Ab1Cd": { "audio_file": ... }` or `"Prompt-Xy9Zw": { "transcript": ... }`. Copy that key, including the part after the dash.
+   The code sample then shows a `tweaks` block keyed by the component ID, for example `"CustomComponent-Ab1Cd": { "audio_file": ... }` or `"Prompt Template-Xy9Zw": { "transcript": ... }`. Copy that key exactly, including any space and the part after the dash.
 4. The Report flow needs only its flow ID.
 
 Component IDs stay the same when you edit a node, re-paste a prompt or rename the node. They change only if you delete the node and add a new one. If that happens, copy the new ID into `.env.local`.

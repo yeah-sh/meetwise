@@ -14,7 +14,8 @@ function createPrismaClient() {
   return new PrismaClient({
     // Prisma 7 connects through a driver adapter; this one uses node-postgres (pg).
     adapter: new PrismaPg({ connectionString }),
-    log: process.env.NODE_ENV === "development" ? ["query", "warn", "error"] : ["warn", "error"],
+    // Not "query": status polling every 3 s would print a line for every SQL statement.
+    log: ["warn", "error"],
   });
 }
 

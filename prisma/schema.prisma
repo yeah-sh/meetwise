@@ -1,6 +1,6 @@
 // MeetWise database schema (PostgreSQL, database: meeting_app).
 // Prisma 7 does not allow `url` here: the connection URL is set in prisma.config.ts
-// (datasource.url = env("DATABASE_URL"), loaded from .env.local) and, at runtime,
+// (datasource.url = process.env.DATABASE_URL, loaded from .env.local) and, at runtime,
 // passed to PrismaClient through the pg adapter in src/lib/db.ts.
 
 generator client {

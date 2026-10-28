@@ -149,7 +149,8 @@ function describeHttpError(step: Step, status: number, body: unknown, rawText: s
   const stepInfo: { label: string; flowVar: string; componentVar?: string } = STEPS[step];
   const { label, flowVar } = stepInfo;
   const detail = isRecord(body) ? body.detail : undefined;
-  const message = truncate(extractMessage(detail, rawText), 500);
+  // 300 keeps the longest message below (rate limit) within Meeting.errorMessage's 400 characters.
+  const message = truncate(extractMessage(detail, rawText), 300);
 
   if (status === 401 || status === 403) {
     return new LangflowError(
@@ -192,15 +193,40 @@ function describeHttpError(step: Step, status: number, body: unknown, rawText: s
 }
 
 // Langflow errors come as {"detail": "text"}, {"detail": {..., "message"}} (e.g. refused tweaks),
-// or, when a component fails, {"detail": "<JSON string with a message field>"}.
+// or, when a component fails, {"detail": "<JSON string with a message field>"}, where the message
+// may also be a list of strings. Returns the message without Langflow's wrappers (see shortenMessage).
 function extractMessage(detail: unknown, rawText: string): string {
   if (typeof detail === "string") {
     const nested = parseJson(detail);
-    return isRecord(nested) && typeof nested.message === "string" ? nested.message : detail;
+    const message = isRecord(nested) ? messageText(nested.message) : undefined;
+    return shortenMessage(message ?? detail);
   }
-  if (isRecord(detail) && typeof detail.message === "string") return detail.message;
+  const message = isRecord(detail) ? messageText(detail.message) : undefined;
+  if (message !== undefined) return shortenMessage(message);
   if (detail !== undefined) return JSON.stringify(detail);
-  return rawText.trim() || "no details";
+  return shortenMessage(rawText) || "no details";
+}
+
+function messageText(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && value.every((part) => typeof part === "string")) return value.join(" ");
+  return undefined;
+}
+
+// A failing component reaches the app as "Error running graph: Error building Component Groq Whisper
+// Transcriber: \n\n<cause>", and a model provider's error inside it as "Error code: 429 - {'error':
+// {'message': '<cause>', 'type': ...}}" (the OpenAI client's text, in Python's quoting). Only the cause
+// is kept, with the provider's HTTP status, which the rate-limit and size checks above rely on. The
+// app's own message already says which step failed.
+const WRAPPER_PREFIX = /^\s*(?:Error running graph|Error building Component [^:\n]*):\s*/i;
+const PROVIDER_ERROR = /Error code: (\d{3}) - [\s\S]*?['"]message['"]:\s*(['"])([\s\S]+?)\2\s*[,}]/;
+
+function shortenMessage(message: string): string {
+  let text = message;
+  while (WRAPPER_PREFIX.test(text)) text = text.replace(WRAPPER_PREFIX, "");
+  const provider = text.match(PROVIDER_ERROR);
+  if (provider) text = `${provider[3]} (HTTP ${provider[1]})`;
+  return text.replace(/\s+/g, " ").trim() || message.trim();
 }
 
 // Finds an output component by its name in the flow and returns its text.

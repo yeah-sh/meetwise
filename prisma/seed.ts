@@ -131,4 +131,5 @@ main()
     console.error("Seeding failed:", error instanceof Error ? error.message : error);
     process.exitCode = 1;
   })
-  .finally(() => prisma.$disconnect());
+  // A failed disconnect would otherwise be an unhandled rejection.
+  .finally(() => prisma.$disconnect().catch(() => {}));

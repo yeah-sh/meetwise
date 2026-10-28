@@ -2,7 +2,7 @@
 //
 // Every question sends the Q&A flow the prompt's rules (~700 tokens), the summary, the last 10 chat
 // messages Langflow remembers, the question and the transcript, which is by far the biggest part.
-// llama-3.3-70b-versatile reads up to 128k tokens, but because the transcript goes out again with
+// openai/gpt-oss-120b reads up to 128k tokens, but because the transcript goes out again with
 // every question, its size also decides per-minute token limits (Groq's free tier allows far fewer
 // tokens per minute than the model can read), speed and cost, and models find facts less reliably in
 // very long prompts. So:
