@@ -1,7 +1,8 @@
 // DELETE /api/meetings/[id]: deletes the meeting, its report items and chat messages (removed by
-// the database's ON DELETE CASCADE) and its audio file. Answers 204 with no body.
+// the database's ON DELETE CASCADE), its audio file and Langflow's chat memory of it. Answers 204 with no body.
 // A meeting that is still processing can be deleted too: the pipeline notices the missing row and stops.
 import { prisma } from "@/lib/db";
+import { clearMeetingMemory } from "@/lib/langflow";
 import { deleteUpload } from "@/lib/storage";
 import { isValidMeetingId } from "@/lib/validation";
 import type { ApiError } from "@/types";
@@ -37,6 +38,17 @@ export async function DELETE(_request: Request, ctx: RouteContext<"/api/meetings
     await deleteUpload(audioPath);
   } catch (error) {
     console.error(`[api/meetings/delete] Meeting ${id} was deleted, but not its audio file:`, error);
+  }
+
+  // Best effort, as when clearing the chat: if Langflow cannot be reached, its stored messages for
+  // this meeting (session_id = meeting id) are left behind, unused, and only take space.
+  try {
+    await clearMeetingMemory(id);
+  } catch (error) {
+    console.warn(
+      `[api/meetings/delete] Meeting ${id} was deleted, but not Langflow's chat memory of it:`,
+      error instanceof Error ? error.message : error,
+    );
   }
   return new Response(null, { status: 204 });
 }

@@ -1,5 +1,6 @@
 // The only place the app talks to AI: runs the Langflow flows for transcription,
-// report generation and Q&A (POST {LANGFLOW_BASE_URL}/api/v1/run/{flowId} with an x-api-key header).
+// report generation and Q&A (POST {LANGFLOW_BASE_URL}/api/v1/run/{flowId} with an x-api-key header),
+// and clears a meeting's Q&A chat memory.
 // Server-only: the import below turns an import from a client component into a build error.
 // Endpoints, tweaks and output names are described in langflow/FLOWS.md ("How the app will call it").
 import "server-only";
@@ -65,6 +66,7 @@ const STEPS = {
     timeoutMs: 2 * 60_000,
   },
   delete: { label: "deleting the uploaded audio copy", flowVar: "LANGFLOW_TRANSCRIBE_FLOW_ID", timeoutMs: 15_000 },
+  clearMemory: { label: "clearing the chat memory", flowVar: "LANGFLOW_QA_FLOW_ID", timeoutMs: 15_000 },
 } as const;
 
 type Step = keyof typeof STEPS;
@@ -116,6 +118,8 @@ async function langflowFetch(step: Step, config: Config, urlPath: string, option
 
   const body = parseJson(rawText);
   if (status < 200 || status >= 300) throw describeHttpError(step, status, body, rawText);
+  // 204 No Content (e.g. after clearing chat memory) has no body to parse.
+  if (status === 204) return null;
   if (body === null) {
     throw new LangflowError("BAD_RESPONSE", `Langflow sent a response that is not JSON during ${STEPS[step].label}.`, status);
   }
@@ -355,6 +359,18 @@ export async function askMeeting({ meetingId, question, transcript, summary }: A
     },
   });
   return readOutputText(body, "Answer Output");
+}
+
+// Deletes the Q&A flow's stored messages for one meeting (session_id = meeting id): when its chat is
+// cleared, so they no longer feed the prompt's "conversation so far", and when the meeting is deleted.
+// Langflow answers 204 even when there were none, and only deletes messages of flows owned by the API key's user.
+export async function clearMeetingMemory(meetingId: string): Promise<void> {
+  const config = getConfig();
+  if (!meetingId.trim()) {
+    throw new LangflowError("INVALID_INPUT", "Clearing chat memory needs a meeting id.");
+  }
+  const urlPath = `/api/v1/monitor/messages/session/${encodeURIComponent(meetingId)}`;
+  await langflowFetch("clearMemory", config, urlPath, { method: "DELETE" });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

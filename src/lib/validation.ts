@@ -2,6 +2,8 @@
 // Server-only: it reads MAX_UPLOAD_MB, and the browser's own checks are never trusted on their own.
 import "server-only";
 import path from "node:path";
+import { MAX_QUESTION_LENGTH } from "@/lib/chat-questions";
+import type { InputMode } from "@/types";
 
 export type ValidationResult<T> = { success: true; data: T } | { success: false; error: string };
 
@@ -103,4 +105,42 @@ const MEETING_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 export function isValidMeetingId(id: string): boolean {
   return MEETING_ID_PATTERN.test(id);
+}
+
+// A chat request is a short JSON object. A 1,000-character question takes at most ~6 KB even with
+// every character escaped, so anything far larger is refused before the body is read.
+const CHAT_BODY_MAX_BYTES = 16 * 1024;
+
+// Returns an error message, or null when the size is fine or unknown.
+export function checkChatRequestSize(request: Request): string | null {
+  const contentLength = Number(request.headers.get("content-length"));
+  return contentLength > CHAT_BODY_MAX_BYTES ? "The request is too large for a chat question." : null;
+}
+
+export type ValidChatQuestion = { question: string; inputMode: InputMode };
+
+// The JSON body of POST /api/meetings/[id]/chat: { question: string, inputMode?: "TEXT" | "VOICE" }.
+// The question is trimmed and must then be 1 to MAX_QUESTION_LENGTH characters.
+export function validateChatQuestion(body: unknown): ValidationResult<ValidChatQuestion> {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return { success: false, error: 'Send a JSON object such as { "question": "What was decided?" }.' };
+  }
+  const { question, inputMode = "TEXT" } = body as Record<string, unknown>;
+  if (typeof question !== "string") {
+    return { success: false, error: "The question must be text." };
+  }
+  const trimmed = question.trim();
+  if (!trimmed) {
+    return { success: false, error: "Type a question first." };
+  }
+  if (trimmed.length > MAX_QUESTION_LENGTH) {
+    return {
+      success: false,
+      error: `A question can be at most ${MAX_QUESTION_LENGTH.toLocaleString("en-GB")} characters; this one has ${trimmed.length.toLocaleString("en-GB")}.`,
+    };
+  }
+  if (inputMode !== "TEXT" && inputMode !== "VOICE") {
+    return { success: false, error: 'inputMode must be "TEXT" or "VOICE".' };
+  }
+  return { success: true, data: { question: trimmed, inputMode } };
 }

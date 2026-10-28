@@ -4,6 +4,7 @@
 import "server-only";
 import { cache } from "react";
 import { connection } from "next/server";
+import { CHAT_MESSAGE_SELECT, toChatMessageView } from "@/lib/chat";
 import { prisma } from "@/lib/db";
 import { failIfInterrupted } from "@/lib/process-meeting";
 import { isValidMeetingId } from "@/lib/validation";
@@ -50,8 +51,8 @@ export async function listMeetings() {
 
 export type MeetingListItem = Awaited<ReturnType<typeof listMeetings>>[number];
 
-// One meeting with its transcript and report items in report order, or null when the id is
-// invalid or unknown. Wrapped in cache() so generateMetadata and the page share one query per request.
+// One meeting with its transcript, report items in report order and chat (oldest first), or null
+// when the id is invalid or unknown. Wrapped in cache() so generateMetadata and the page share one query per request.
 // The audio path is not selected: the page plays the file through /api/meetings/[id]/audio.
 export const getMeeting = cache(async (id: string) => {
   await connection();
@@ -74,12 +75,13 @@ export const getMeeting = cache(async (id: string) => {
         orderBy: { position: "asc" },
         select: { id: true, category: true, text: true, owner: true, dueDate: true, status: true, detail: true },
       },
+      chatMessages: { orderBy: { createdAt: "asc" }, select: CHAT_MESSAGE_SELECT },
     },
   });
   if (!meeting) return null;
 
   const { status, errorMessage } = await failIfInterrupted(meeting);
-  return { ...meeting, status, errorMessage };
+  return { ...meeting, status, errorMessage, chatMessages: meeting.chatMessages.map(toChatMessageView) };
 });
 
 export type MeetingDetail = NonNullable<Awaited<ReturnType<typeof getMeeting>>>;

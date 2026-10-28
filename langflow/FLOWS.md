@@ -149,7 +149,7 @@ Meeting Q&A Prompt ───────► Language Model (Input) ───► 
 - On every run, Langflow writes the request's `session_id` into every component that has a Session ID field. That is why those fields stay empty.
 - **The app must send the meeting's id as `session_id` on every Q&A request.** Without it, Langflow uses the flow ID as the session ID, and every meeting would share a single history.
 - Langflow always runs the Chat Input first, so the current question is already stored when Message History reads. It therefore appears as the last `User:` line of `{history}`, and the prompt tells the model to expect that.
-- Stored messages are listed under **Settings → Messages**. When a meeting is deleted, the app can clear its memory with `DELETE /api/v1/monitor/messages/session/{meetingId}`.
+- Stored messages are listed under **Settings → Messages**. When a meeting's chat is cleared or the meeting is deleted, the app clears its memory with `DELETE /api/v1/monitor/messages/session/{meetingId}`.
 
 ### How the app will call it
 

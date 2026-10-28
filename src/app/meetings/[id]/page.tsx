@@ -5,12 +5,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, FileText, ScrollText } from "lucide-react";
 import { AudioPlayer } from "@/components/audio-player";
-import { ChatPanelPlaceholder } from "@/components/chat-panel-placeholder";
+import { MeetingChat } from "@/components/meeting-chat";
 import { MeetingProcessing } from "@/components/meeting-processing";
 import { MeetingReport } from "@/components/meeting-report";
 import { StatusBadge } from "@/components/status-badge";
 import { TranscriptViewer } from "@/components/transcript-viewer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { suggestQuestions } from "@/lib/chat-questions";
 import { formatDateTime } from "@/lib/format";
 import { getMeeting, type MeetingDetail } from "@/lib/meetings";
 
@@ -44,8 +45,15 @@ export default async function MeetingPage({ params }: PageProps<"/meetings/[id]"
           )}
         </div>
 
-        {/* PHASE 6: the chat panel goes here. */}
-        <ChatPanelPlaceholder />
+        {/* Usable once the meeting is READY; until then it says when the chat will open.
+            key: a different meeting starts with its own chat state. */}
+        <MeetingChat
+          key={meeting.id}
+          meetingId={meeting.id}
+          status={meeting.status}
+          initialMessages={meeting.chatMessages}
+          suggestions={suggestQuestions(meeting.reportItems)}
+        />
       </div>
     </main>
   );
