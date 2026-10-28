@@ -1,0 +1,368 @@
+{
+  "data": {
+    "edges": [
+      {
+        "animated": false,
+        "className": "",
+        "data": {
+          "sourceHandle": {
+            "dataType": "GroqWhisperTranscriber",
+            "id": "CustomComponent-21n2C",
+            "name": "transcript",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "TextOutput-NusBQ",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          }
+        },
+        "id": "xy-edge__CustomComponent-21n2C{œdataTypeœ:œGroqWhisperTranscriberœ,œidœ:œCustomComponent-21n2Cœ,œnameœ:œtranscriptœ,œoutput_typesœ:[œMessageœ]}-TextOutput-NusBQ{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-NusBQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "source": "CustomComponent-21n2C",
+        "sourceHandle": "{œdataTypeœ:œGroqWhisperTranscriberœ,œidœ:œCustomComponent-21n2Cœ,œnameœ:œtranscriptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "TextOutput-NusBQ",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œTextOutput-NusBQœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
+      }
+    ],
+    "nodes": [
+      {
+        "data": {
+          "id": "CustomComponent-21n2C",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Transcribes an audio file to text with Groq's hosted Whisper models.",
+            "display_name": "Groq Whisper Transcriber",
+            "documentation": "https://console.groq.com/docs/speech-to-text",
+            "edited": true,
+            "field_order": [
+              "api_key",
+              "audio_file",
+              "model_name",
+              "language"
+            ],
+            "frozen": false,
+            "icon": "Groq",
+            "legacy": false,
+            "lf_version": "1.12.6",
+            "metadata": {
+              "code_hash": "824d71d2cc9c",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "httpx",
+                    "version": "0.28.1"
+                  },
+                  {
+                    "name": "lfx",
+                    "version": "1.12.6"
+                  }
+                ],
+                "total_dependencies": 2
+              },
+              "module": "custom_components.groq_whisper_transcriber"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Transcript",
+                "group_outputs": false,
+                "hidden": null,
+                "loop_types": null,
+                "method": "transcribe",
+                "name": "transcript",
+                "options": null,
+                "required_inputs": null,
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Groq API Key",
+                "dynamic": false,
+                "info": "Select the GROQ_API_KEY global variable instead of pasting the key here.",
+                "input_types": [],
+                "load_from_db": true,
+                "name": "api_key",
+                "override_skip": false,
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "GROQ_API_KEY"
+              },
+              "audio_file": {
+                "_input_type": "FileInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Audio File",
+                "dynamic": false,
+                "fileTypes": [
+                  "mp3",
+                  "mp4",
+                  "m4a",
+                  "wav",
+                  "webm",
+                  "ogg",
+                  "flac"
+                ],
+                "file_path": "5b230ee7-3f70-4aac-a0d7-00854e9f537f/Recording.m4a",
+                "info": "The recording to transcribe. MeetWise sets this on every run with an API tweak.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "audio_file",
+                "override_skip": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "temp_file": false,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "file",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "\"\"\"Groq Whisper Transcriber: Langflow custom component for MeetWise's Transcribe flow.\r\n\r\nPaste this whole file into a Custom Component in Langflow Desktop (see langflow/FLOWS.md).\r\nWritten against Langflow 1.12, where components import from the `lfx` package.\r\n\"\"\"\r\n\r\nimport mimetypes\r\nimport re\r\nfrom pathlib import Path\r\n\r\nimport httpx\r\nfrom lfx.custom.custom_component.component import Component\r\nfrom lfx.io import FileInput, Output, SecretStrInput, StrInput\r\nfrom lfx.schema.message import Message\r\n\r\nGROQ_TRANSCRIPTIONS_URL = \"https://api.groq.com/openai/v1/audio/transcriptions\"\r\nDEFAULT_MODEL = \"whisper-large-v3-turbo\"\r\nAUDIO_FILE_TYPES = [\"mp3\", \"mp4\", \"m4a\", \"wav\", \"webm\", \"ogg\", \"flac\"]\r\n# Groq answers in seconds, but uploading a 25 MB file on a slow connection can take minutes.\r\nREQUEST_TIMEOUT = httpx.Timeout(300.0, connect=15.0)\r\n\r\n\r\nclass GroqWhisperTranscriber(Component):\r\n    display_name = \"Groq Whisper Transcriber\"\r\n    description = \"Transcribes an audio file to text with Groq's hosted Whisper models.\"\r\n    documentation = \"https://console.groq.com/docs/speech-to-text\"\r\n    icon = \"Groq\"\r\n    name = \"GroqWhisperTranscriber\"\r\n\r\n    inputs = [\r\n        SecretStrInput(\r\n            name=\"api_key\",\r\n            display_name=\"Groq API Key\",\r\n            info=\"Select the GROQ_API_KEY global variable instead of pasting the key here.\",\r\n            required=True,\r\n        ),\r\n        FileInput(\r\n            name=\"audio_file\",\r\n            display_name=\"Audio File\",\r\n            file_types=AUDIO_FILE_TYPES,\r\n            info=\"The recording to transcribe. MeetWise sets this on every run with an API tweak.\",\r\n            required=True,\r\n        ),\r\n        StrInput(\r\n            name=\"model_name\",\r\n            display_name=\"Model\",\r\n            value=DEFAULT_MODEL,\r\n            info=\"whisper-large-v3-turbo (fast) or whisper-large-v3 (slightly more accurate).\",\r\n        ),\r\n        StrInput(\r\n            name=\"language\",\r\n            display_name=\"Language Code\",\r\n            value=\"\",\r\n            info=\"Optional ISO-639-1 code such as 'en' or 'hi'. Leave empty to auto-detect.\",\r\n        ),\r\n    ]\r\n\r\n    outputs = [\r\n        Output(display_name=\"Transcript\", name=\"transcript\", method=\"transcribe\"),\r\n    ]\r\n\r\n    async def transcribe(self) -> Message:\r\n        audio_path = self._resolve_audio_path()\r\n        form = {\"model\": (self.model_name or \"\").strip() or DEFAULT_MODEL, \"response_format\": \"json\"}\r\n        language = (self.language or \"\").strip().lower()\r\n        if language:\r\n            if not re.fullmatch(r\"[a-z]{2,3}\", language):\r\n                msg = f\"Language code '{language}' is not valid. Use an ISO-639-1 code such as 'en', or leave it empty.\"\r\n                raise ValueError(msg)\r\n            form[\"language\"] = language\r\n\r\n        mime_type = mimetypes.guess_type(audio_path.name)[0] or \"application/octet-stream\"\r\n        files = {\"file\": (audio_path.name, audio_path.read_bytes(), mime_type)}\r\n        try:\r\n            async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:\r\n                response = await client.post(\r\n                    GROQ_TRANSCRIPTIONS_URL,\r\n                    headers={\"Authorization\": f\"Bearer {self._read_api_key()}\"},\r\n                    data=form,\r\n                    files=files,\r\n                )\r\n        except httpx.TimeoutException as e:\r\n            msg = \"Groq did not respond in time. Try again, or upload a shorter recording.\"\r\n            raise RuntimeError(msg) from e\r\n        except httpx.HTTPError as e:\r\n            msg = f\"Could not reach Groq ({type(e).__name__}: {e}). Check the internet connection and try again.\"\r\n            raise RuntimeError(msg) from e\r\n\r\n        if response.status_code != httpx.codes.OK:\r\n            raise RuntimeError(self._describe_error(response))\r\n\r\n        text = self._parse_transcript(response)\r\n        if not text:\r\n            msg = \"Groq returned an empty transcript. The recording may contain no speech.\"\r\n            raise ValueError(msg)\r\n        message = Message(text=text)\r\n        self.status = message\r\n        return message\r\n\r\n    def _resolve_audio_path(self) -> Path:\r\n        value = self.audio_file\r\n        # A FileInput can hold a list of paths; this component transcribes one file.\r\n        if isinstance(value, list):\r\n            value = value[0] if value else None\r\n        if not value:\r\n            msg = \"No audio file was provided. Upload one, or pass it with an API tweak on 'audio_file'.\"\r\n            raise ValueError(msg)\r\n        path = Path(str(value))\r\n        if not path.is_file():\r\n            msg = f\"Audio file not found: {path.name}\"\r\n            raise ValueError(msg)\r\n        if path.suffix.lower().lstrip(\".\") not in AUDIO_FILE_TYPES:\r\n            msg = f\"Unsupported audio type '{path.suffix or 'none'}'. Use one of: {', '.join(AUDIO_FILE_TYPES)}.\"\r\n            raise ValueError(msg)\r\n        return path\r\n\r\n    def _read_api_key(self) -> str:\r\n        key = self.api_key\r\n        # Secret inputs usually arrive as plain strings, but may be a pydantic SecretStr.\r\n        if hasattr(key, \"get_secret_value\"):\r\n            key = key.get_secret_value()\r\n        key = (key or \"\").strip()\r\n        if not key:\r\n            msg = \"Groq API key is missing. Select the GROQ_API_KEY global variable in the 'Groq API Key' field.\"\r\n            raise ValueError(msg)\r\n        return key\r\n\r\n    @staticmethod\r\n    def _describe_error(response: httpx.Response) -> str:\r\n        \"\"\"Build a short error for a failed Groq call. Never includes the API key.\"\"\"\r\n        status = response.status_code\r\n        if status == httpx.codes.UNAUTHORIZED:\r\n            # Skip Groq's own text here in case it echoes part of the key.\r\n            return \"Groq rejected the API key (HTTP 401). Check the GROQ_API_KEY global variable in Langflow.\"\r\n        try:\r\n            detail = response.json()[\"error\"][\"message\"]\r\n        except (ValueError, KeyError, TypeError):\r\n            detail = response.text[:300]\r\n        hints = {\r\n            413: \"The audio file is too large for Groq (the free tier accepts up to 25 MB).\",\r\n            429: \"Groq's rate limit was reached. Wait a minute and try again.\",\r\n        }\r\n        hint = hints.get(status, \"Groq could not transcribe the audio.\")\r\n        return f\"{hint} (HTTP {status}: {detail})\"\r\n\r\n    @staticmethod\r\n    def _parse_transcript(response: httpx.Response) -> str:\r\n        try:\r\n            return str(response.json().get(\"text\") or \"\").strip()\r\n        except (ValueError, AttributeError) as e:\r\n            msg = \"Groq returned a response that was not valid JSON.\"\r\n            raise RuntimeError(msg) from e\r\n"
+              },
+              "language": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Language Code",
+                "dynamic": false,
+                "info": "Optional ISO-639-1 code such as 'en' or 'hi'. Leave empty to auto-detect.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "language",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              },
+              "model_name": {
+                "_input_type": "StrInput",
+                "advanced": false,
+                "api_editable": false,
+                "display_name": "Model",
+                "dynamic": false,
+                "info": "whisper-large-v3-turbo (fast) or whisper-large-v3 (slightly more accurate).",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "model_name",
+                "override_skip": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": "whisper-large-v3-turbo"
+              }
+            },
+            "tool_mode": false
+          },
+          "selected_output": "output",
+          "showNode": true,
+          "type": "GroqWhisperTranscriber"
+        },
+        "dragging": false,
+        "id": "CustomComponent-21n2C",
+        "position": {
+          "x": 155.99998226517832,
+          "y": 127.00000243684576
+        },
+        "selected": false,
+        "type": "genericNode"
+      },
+      {
+        "data": {
+          "id": "TextOutput-NusBQ",
+          "node": {
+            "base_classes": [
+              "Message"
+            ],
+            "beta": false,
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Sends text output via API.",
+            "display_name": "Text Output",
+            "documentation": "https://docs.langflow.org/text-input-and-output",
+            "edited": false,
+            "field_order": [
+              "input_value"
+            ],
+            "frozen": false,
+            "icon": "type",
+            "legacy": true,
+            "lf_version": "1.12.6",
+            "metadata": {
+              "code_hash": "3ececc60ddaf",
+              "dependencies": {
+                "dependencies": [
+                  {
+                    "name": "lfx",
+                    "version": null
+                  }
+                ],
+                "total_dependencies": 1
+              },
+              "module": "lfx.components.input_output.text_output.TextOutputComponent"
+            },
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Output Text",
+                "group_outputs": false,
+                "method": "text_response",
+                "name": "text",
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              }
+            ],
+            "pinned": false,
+            "replacement": [
+              "input_output.ChatOutput"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "advanced": true,
+                "api_editable": false,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from lfx.base.io.text import TextComponent\nfrom lfx.io import MultilineInput, Output\nfrom lfx.schema.message import Message\n\n\nclass TextOutputComponent(TextComponent):\n    display_name = \"Text Output\"\n    description = \"Sends text output via API.\"\n    documentation: str = \"https://docs.langflow.org/text-input-and-output\"\n    icon = \"type\"\n    name = \"TextOutput\"\n    legacy = True\n    replacement = [\"input_output.ChatOutput\"]\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Inputs\",\n            info=\"Text to be passed as output.\",\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def text_response(self) -> Message:\n        message = Message(\n            text=self.input_value,\n        )\n        self.status = self.input_value\n        return message\n"
+              },
+              "input_value": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "ai_enabled": false,
+                "api_editable": false,
+                "copy_field": false,
+                "display_name": "Inputs",
+                "dynamic": false,
+                "info": "Text to be passed as output.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "override_skip": false,
+                "password": false,
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "track_in_telemetry": false,
+                "type": "str",
+                "value": ""
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "TextOutput"
+        },
+        "dragging": false,
+        "id": "TextOutput-NusBQ",
+        "position": {
+          "x": 588.0000147564547,
+          "y": 198.99998619120754
+        },
+        "selected": false,
+        "type": "genericNode"
+      }
+    ],
+    "viewport": {
+      "x": 0.000064847163343984,
+      "y": 0.00004074947014487407,
+      "zoom": 0.9999998646197006
+    }
+  },
+  "description": "Innovation in Interaction with IBM Langflow Desktop.",
+  "endpoint_name": null,
+  "id": "5b22c4e0-2de3-4eea-8950-da4ef7eaa868",
+  "is_component": false,
+  "last_tested_version": "1.12.6",
+  "locked": false,
+  "name": "Transcribe",
+  "tags": []
+}
