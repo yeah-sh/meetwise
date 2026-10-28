@@ -1,8 +1,8 @@
-// Server-side validation for user input: audio uploads (type, size), meeting ids, chat questions.
-// Server-only: it reads MAX_UPLOAD_MB, and the browser's own checks are never trusted on their own.
+// Server-side validation for user input: audio uploads (type, size), spoken questions, meeting ids,
+// chat questions. Server-only: it reads MAX_UPLOAD_MB, and the browser's own checks are never trusted on their own.
 import "server-only";
 import path from "node:path";
-import { MAX_QUESTION_LENGTH } from "@/lib/chat-questions";
+import { MAX_QUESTION_LENGTH, MAX_VOICE_MB } from "@/lib/chat-questions";
 import type { InputMode } from "@/types";
 
 export type ValidationResult<T> = { success: true; data: T } | { success: false; error: string };
@@ -49,9 +49,41 @@ export function checkUploadRequestSize(request: Request): string | null {
 
 export type ValidAudio = { file: File; fileName: string; extension: string; mimeType: string };
 
-// Checks the "audio" form field: a non-empty file with an allowed extension, a MIME type that
-// matches that extension, and a size within MAX_UPLOAD_MB.
+// Checks the "audio" form field of a meeting upload: a non-empty file with an allowed extension,
+// a MIME type that matches that extension, and a size within MAX_UPLOAD_MB.
 export function validateAudioUpload(value: FormDataEntryValue | null): ValidationResult<ValidAudio> {
+  return checkAudioFile(value, {
+    extensions: EXTENSIONS,
+    maxMb: getMaxUploadMb(),
+    tooLargeHint: "Use a shorter or more compressed recording.",
+  });
+}
+
+// Spoken chat questions come from the browser's MediaRecorder, which records WebM or Ogg (Chrome,
+// Edge, Firefox) or MP4 (Safari); WAV is accepted too. A question is short, hence the small limit.
+const QUESTION_EXTENSIONS = ["webm", "ogg", "mp4", "m4a", "wav"];
+
+// Checked before the body is read, as for uploads. Returns an error message, or null when the size is fine or unknown.
+export function checkQuestionAudioRequestSize(request: Request): string | null {
+  const contentLength = Number(request.headers.get("content-length"));
+  return contentLength > MAX_VOICE_MB * BYTES_PER_MB + FORM_OVERHEAD_BYTES
+    ? `The recording is larger than the ${MAX_VOICE_MB} MB limit for a spoken question.`
+    : null;
+}
+
+// The "audio" field of POST /api/transcribe-question: the same checks as an upload, with the
+// recorder's formats and a MAX_VOICE_MB limit.
+export function validateQuestionAudio(value: FormDataEntryValue | null): ValidationResult<ValidAudio> {
+  return checkAudioFile(value, {
+    extensions: QUESTION_EXTENSIONS,
+    maxMb: MAX_VOICE_MB,
+    tooLargeHint: "Keep spoken questions short.",
+  });
+}
+
+type AudioRules = { extensions: readonly string[]; maxMb: number; tooLargeHint: string };
+
+function checkAudioFile(value: FormDataEntryValue | null, rules: AudioRules): ValidationResult<ValidAudio> {
   if (!(value instanceof File)) {
     return { success: false, error: 'No audio file was sent. Choose a recording (form field "audio").' };
   }
@@ -59,9 +91,9 @@ export function validateAudioUpload(value: FormDataEntryValue | null): Validatio
     return { success: false, error: "The audio file is empty." };
   }
 
-  const allowed = `Use one of: ${EXTENSIONS.join(", ")}.`;
+  const allowed = `Use one of: ${rules.extensions.join(", ")}.`;
   const extension = path.extname(value.name).slice(1).toLowerCase();
-  const mimeTypes = AUDIO_TYPES[extension];
+  const mimeTypes = rules.extensions.includes(extension) ? AUDIO_TYPES[extension] : undefined;
   if (!mimeTypes) {
     return { success: false, error: `"${extension ? `.${extension}` : "No extension"}" is not a supported audio type. ${allowed}` };
   }
@@ -74,12 +106,11 @@ export function validateAudioUpload(value: FormDataEntryValue | null): Validatio
     };
   }
 
-  const maxMb = getMaxUploadMb();
-  if (value.size > maxMb * BYTES_PER_MB) {
+  if (value.size > rules.maxMb * BYTES_PER_MB) {
     const sizeMb = (value.size / BYTES_PER_MB).toFixed(1);
     return {
       success: false,
-      error: `The file is ${sizeMb} MB, but the limit is ${maxMb} MB. Use a shorter or more compressed recording.`,
+      error: `The file is ${sizeMb} MB, but the limit is ${rules.maxMb} MB. ${rules.tooLargeHint}`,
     };
   }
 

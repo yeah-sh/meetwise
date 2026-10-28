@@ -4,6 +4,11 @@ import type { ReportCategory } from "@/generated/prisma/enums";
 // Checked by the chat panel as the user types and again by the API (validation.ts).
 export const MAX_QUESTION_LENGTH = 1000;
 
+// Spoken questions: the recorder stops by itself after MAX_VOICE_SECONDS, and POST /api/transcribe-question
+// refuses recordings over MAX_VOICE_MB (30 seconds of Opus audio is well under 1 MB).
+export const MAX_VOICE_SECONDS = 30;
+export const MAX_VOICE_MB = 5;
+
 const SUGGESTION_COUNT = 4;
 
 // In order of preference. Each is offered only when the report has items of its category, so a

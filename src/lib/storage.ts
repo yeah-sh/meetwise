@@ -1,5 +1,6 @@
 // Uploaded audio on disk: storage/uploads/ under the project root, outside public/ so it is never
 // served statically. Meeting.audioPath holds the path relative to the project root, as in prisma/seed.ts.
+// Spoken chat questions are kept in storage/uploads/tmp/ only while they are being transcribed.
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -48,6 +49,30 @@ export async function getUploadSize(audioPath: string): Promise<number | null> {
   } catch {
     return null;
   }
+}
+
+// Spoken chat questions live in storage/uploads/tmp/ only while they are transcribed.
+function tempFile(fileName: string): string {
+  return path.join(process.cwd(), "storage", "uploads", "tmp", fileName);
+}
+
+// Saves a recording under a generated name and returns its absolute path. The caller deletes it with
+// deleteTempAudio once done. `extension` must come from validateQuestionAudio's allow-list.
+export async function saveTempAudio(file: File, extension: string): Promise<string> {
+  const fullPath = tempFile(`${randomUUID()}.${extension}`);
+  await mkdir(path.dirname(fullPath), { recursive: true });
+  try {
+    await writeFile(fullPath, Buffer.from(await file.arrayBuffer()), { flag: "wx" });
+  } catch (error) {
+    await rm(fullPath, { force: true }); // a write that failed half-way may have left a partial file
+    throw error;
+  }
+  return fullPath;
+}
+
+// Only removes files inside storage/uploads/tmp/, whatever path it is given.
+export async function deleteTempAudio(fullPath: string): Promise<void> {
+  await rm(tempFile(path.basename(fullPath)), { force: true });
 }
 
 // Streams bytes start..end (both inclusive) of a stored upload, for a Response body.

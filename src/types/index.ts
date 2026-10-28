@@ -28,6 +28,9 @@ export type ChatHistoryResponse = { messages: ChatMessageView[] };
 // 201 from POST /api/meetings/[id]/chat
 export type ChatReply = { userMessage: ChatMessageView; assistantMessage: ChatMessageView };
 
+// 200 from POST /api/transcribe-question: a spoken question as text.
+export type TranscribedQuestion = { text: string };
+
 // Error body of POST /api/meetings/[id]/chat. userMessage is set when the question was saved but
 // not answered (502 when Langflow fails), so the panel can show it with a Retry button.
 export type ChatErrorResponse = ApiError & { userMessage?: ChatMessageView };

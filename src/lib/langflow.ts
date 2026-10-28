@@ -19,6 +19,7 @@ export type LangflowErrorCode =
   | "TOO_LARGE"
   | "TWEAKS_REFUSED"
   | "FLOW_FAILED"
+  | "NO_SPEECH"
   | "BAD_RESPONSE";
 
 // Messages are written for people and never contain the API key, so they are safe to show
@@ -298,6 +299,7 @@ async function deleteLangflowFile(config: Config, storedPath: string): Promise<v
 }
 
 // Uploads the audio, runs the Transcribe flow on it and returns the transcript.
+// Throws a LangflowError with code NO_SPEECH when Whisper heard nothing.
 export async function transcribeAudio(filePath: string): Promise<string> {
   const config = getConfig();
   await ensureTweakTarget("transcribe", config, ["audio_file"]);
@@ -313,6 +315,13 @@ export async function transcribeAudio(filePath: string): Promise<string> {
       },
     });
     return readOutputText(body, "Transcript Output");
+  } catch (error) {
+    // The Whisper component fails with "Groq returned an empty transcript" (groq_whisper.py), and
+    // readOutputText with '... output in Langflow was empty' if an empty text ever got through.
+    if (error instanceof LangflowError && /empty transcript|output in Langflow was empty/i.test(error.message)) {
+      throw new LangflowError("NO_SPEECH", "No speech was found in the recording.", error.status);
+    }
+    throw error;
   } finally {
     await deleteLangflowFile(config, storedPath);
   }

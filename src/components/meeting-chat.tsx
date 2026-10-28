@@ -3,20 +3,28 @@
 // The chat panel on /meetings/[id] (right column on desktop, below the report on phones). Questions go
 // to POST /api/meetings/[id]/chat, where the Q&A flow in Langflow answers them only from this meeting's
 // transcript. Shows the saved chat with the newest message in view, suggested questions while the chat
-// is empty, a typing indicator while waiting, and failures inline with Retry.
+// is empty, a typing indicator while waiting, and failures inline with Retry. Questions can also be
+// spoken with the mic button: they are transcribed, then sent with inputMode "VOICE".
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CircleAlert, LoaderCircle, MessagesSquare, RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
 import { ChatMessage, TypingIndicator } from "@/components/chat-message";
 import { ClearChatButton } from "@/components/clear-chat-button";
+import { MicButton, VoiceStatus } from "@/components/mic-button";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMeetingChat, type PendingQuestion } from "@/hooks/use-meeting-chat";
+import { useStoredFlag } from "@/hooks/use-stored-flag";
+import { useVoiceQuestion } from "@/hooks/use-voice-question";
 import { MAX_QUESTION_LENGTH } from "@/lib/chat-questions";
 import { cn } from "@/lib/utils";
-import type { ChatMessageView, MeetingStatus } from "@/types";
+import type { ChatMessageView, InputMode, MeetingStatus } from "@/types";
 
 // The character count appears once a question gets this close to the limit.
 const COUNT_FROM = MAX_QUESTION_LENGTH - 100;
+// localStorage key of the "Review before sending" checkbox.
+const REVIEW_VOICE_KEY = "reviewVoiceQuestions";
 
 type MeetingChatProps = {
   meetingId: string;
@@ -39,6 +47,10 @@ export function MeetingChat({ status, ...chatProps }: MeetingChatProps) {
 function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps, "status">) {
   const { messages, unsent, sending, error, retryQuestion, send, clear } = useMeetingChat(meetingId, initialMessages);
   const [draft, setDraft] = useState("");
+  // "VOICE" while the box holds a transcribed question, so it is saved as asked by voice even if edited.
+  const [draftMode, setDraftMode] = useState<InputMode>("TEXT");
+  const [reviewVoice, setReviewVoice] = useStoredFlag(REVIEW_VOICE_KEY);
+  const voice = useVoiceQuestion(handleTranscribed);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrolledOnce = useRef(false);
@@ -73,8 +85,31 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
 
   function submitDraft() {
     if (!canSend) return;
-    ask(draft);
+    ask({ content: draft, inputMode: draftMode });
     setDraft("");
+    setDraftMode("TEXT");
+  }
+
+  function handleDraftChange(value: string) {
+    setDraft(value);
+    if (!value.trim()) setDraftMode("TEXT");
+    voice.clearError();
+  }
+
+  // A spoken question, as text. It is sent at once with inputMode "VOICE", unless "Review before
+  // sending" is on, the box already held typed text (the two are joined), an answer is still loading,
+  // or it is too long: then it waits in the box for editing and Send.
+  function handleTranscribed(text: string) {
+    const typed = draft.trim();
+    const question = typed ? `${typed} ${text}` : text;
+    if (!reviewVoice && !typed && !sending && question.length <= MAX_QUESTION_LENGTH) {
+      // Not ask(): focus stays on the mic button, ready for the next spoken question.
+      void send(question, "VOICE");
+      return;
+    }
+    setDraft(question);
+    setDraftMode("VOICE");
+    inputRef.current?.focus({ preventScroll: true });
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -123,10 +158,16 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t p-3">
+        {voice.error && (
+          <p role="alert" className="flex gap-1.5 text-xs text-pretty text-destructive">
+            <CircleAlert className="mt-px size-3.5 shrink-0" />
+            {voice.error}
+          </p>
+        )}
         <Textarea
           ref={inputRef}
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => handleDraftChange(event.target.value)}
           onKeyDown={handleKeyDown}
           disabled={sending}
           rows={1}
@@ -137,19 +178,30 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
           className="max-h-36 min-h-10 resize-none"
         />
         <div className="flex items-center gap-2">
-          <p id={hintId} className={cn("mr-auto text-xs text-muted-foreground", tooLong && "text-destructive")}>
-            {tooLong
-              ? `${length.toLocaleString("en-GB")}/${MAX_QUESTION_LENGTH.toLocaleString("en-GB")}: please shorten your question.`
-              : length >= COUNT_FROM
-                ? `${length.toLocaleString("en-GB")}/${MAX_QUESTION_LENGTH.toLocaleString("en-GB")} characters`
-                : "Enter to send, Shift+Enter for a new line"}
-          </p>
-          {/* PHASE 7: the mic button goes here. It turns speech into text and sends it with send(text, "VOICE"). */}
+          {voice.phase === "idle" ? (
+            <p id={hintId} className={cn("mr-auto text-xs text-muted-foreground", tooLong && "text-destructive")}>
+              {tooLong
+                ? `${length.toLocaleString("en-GB")}/${MAX_QUESTION_LENGTH.toLocaleString("en-GB")}: please shorten your question.`
+                : length >= COUNT_FROM
+                  ? `${length.toLocaleString("en-GB")}/${MAX_QUESTION_LENGTH.toLocaleString("en-GB")} characters`
+                  : "Enter to send, Shift+Enter for a new line"}
+            </p>
+          ) : (
+            <VoiceStatus voice={voice} />
+          )}
+          <MicButton voice={voice} disabled={sending} />
           <Button type="submit" disabled={!canSend}>
             {sending ? <LoaderCircle data-icon="inline-start" className="animate-spin" /> : <SendHorizontal data-icon="inline-start" />}
             Send
           </Button>
         </div>
+        {/* Base UI's checkbox is labelled by the <label> around it. */}
+        <Label className="w-fit text-xs font-normal text-muted-foreground">
+          <Checkbox checked={reviewVoice} onCheckedChange={(checked) => setReviewVoice(checked)} />
+          <span>
+            Review <span className="sr-only">spoken questions </span>before sending
+          </span>
+        </Label>
       </form>
     </>
   );
