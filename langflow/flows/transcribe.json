@@ -221,6 +221,10 @@
         },
         "dragging": false,
         "id": "CustomComponent-21n2C",
+        "measured": {
+          "height": 474,
+          "width": 320
+        },
         "position": {
           "x": 155.99998226517832,
           "y": 127.00000243684576
@@ -239,7 +243,7 @@
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Sends text output via API.",
-            "display_name": "Text Output",
+            "display_name": "Transcript Output",
             "documentation": "https://docs.langflow.org/text-input-and-output",
             "edited": false,
             "field_order": [
@@ -343,18 +347,22 @@
         },
         "dragging": false,
         "id": "TextOutput-NusBQ",
+        "measured": {
+          "height": 283,
+          "width": 320
+        },
         "position": {
           "x": 588.0000147564547,
           "y": 198.99998619120754
         },
-        "selected": false,
+        "selected": true,
         "type": "genericNode"
       }
     ],
     "viewport": {
-      "x": 0.000064847163343984,
-      "y": 0.00004074947014487407,
-      "zoom": 0.9999998646197006
+      "x": 105.36801337657363,
+      "y": 54.30038510934466,
+      "zoom": 0.8346312816873988
     }
   },
   "description": "Innovation in Interaction with IBM Langflow Desktop.",
