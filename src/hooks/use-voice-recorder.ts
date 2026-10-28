@@ -3,7 +3,8 @@
 // Records audio from the microphone with the browser's MediaRecorder API (for spoken chat questions).
 // start() asks for microphone permission the first time (the browser shows its prompt), stop() ends the
 // recording and passes it to onRecorded, and cancel() throws it away. Recording also stops by itself
-// after maxSeconds.
+// after maxSeconds. onStart is called as soon as start() is pressed (the chat panel stops reading an
+// answer aloud, so the microphone does not hear it).
 //
 // Browsers only allow microphone access on secure origins: https:// pages, and http://localhost, which
 // counts as secure, so `npm run dev` works. Opened over plain http:// from another address (e.g.
@@ -18,21 +19,23 @@ const CANNOT_RECORD = "This browser could not start recording. Type your questio
 
 export type Recording = { blob: Blob; seconds: number };
 
-type RecorderOptions = { maxSeconds: number; onRecorded: (recording: Recording) => void };
+type RecorderOptions = { maxSeconds: number; onRecorded: (recording: Recording) => void; onStart?: () => void };
 
 // One press of "record": the microphone stream once it is granted, and its recorder.
 type Session = { stream?: MediaStream; recorder?: MediaRecorder; timer?: number; discard: boolean };
 
-export function useVoiceRecorder({ maxSeconds, onRecorded }: RecorderOptions) {
+export function useVoiceRecorder({ maxSeconds, onRecorded, onStart }: RecorderOptions) {
   const [isStarting, setIsStarting] = useState(false); // waiting for the microphone (or the permission prompt)
   const [isRecording, setIsRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0); // whole seconds
   const [error, setError] = useState<string | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const onRecordedRef = useRef(onRecorded);
+  const onStartRef = useRef(onStart);
 
   useEffect(() => {
     onRecordedRef.current = onRecorded;
+    onStartRef.current = onStart;
   });
 
   // Releases the microphone (the browser's recording indicator goes away) and resets the state.
@@ -49,6 +52,7 @@ export function useVoiceRecorder({ maxSeconds, onRecorded }: RecorderOptions) {
 
   const start = useCallback(async () => {
     if (sessionRef.current) return; // already starting or recording
+    onStartRef.current?.();
     setError(null);
     const unsupported = unsupportedReason();
     if (unsupported) {

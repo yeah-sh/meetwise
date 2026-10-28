@@ -1,8 +1,10 @@
 // One message in the meeting chat (MeetingChat): the user's question as plain text on the right,
-// or the assistant's answer as Markdown on the left. Also the "answering…" indicator.
+// or the assistant's answer as Markdown on the left, with its speaker button where the browser can
+// speak. Also the "answering…" indicator.
 import type { ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import { Mic } from "lucide-react";
+import { SpeakButton, type AnswerSpeech } from "@/components/speak-button";
 import { cn } from "@/lib/utils";
 import type { ChatMessageView } from "@/types";
 
@@ -13,9 +15,10 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "sh
 type ChatMessageProps = {
   message: Pick<ChatMessageView, "role" | "content" | "inputMode"> & { createdAt?: string };
   note?: string; // shown instead of the time for a question not saved yet, e.g. "Sending…"
+  speech?: AnswerSpeech; // answers only, and only where the browser can speak
 };
 
-export function ChatMessage({ message, note }: ChatMessageProps) {
+export function ChatMessage({ message, note, speech }: ChatMessageProps) {
   const isUser = message.role === "USER";
   return (
     <li className={cn("flex max-w-[88%] flex-col gap-1", isUser ? "items-end self-end" : "items-start self-start")}>
@@ -24,6 +27,7 @@ export function ChatMessage({ message, note }: ChatMessageProps) {
         className={cn(
           "min-w-0 rounded-2xl px-3.5 py-2.5 break-words",
           isUser ? "rounded-br-md bg-primary whitespace-pre-wrap text-primary-foreground" : "rounded-bl-md bg-muted",
+          speech?.speaking && "ring-2 ring-primary/40",
         )}
       >
         {isUser ? message.content : <AnswerMarkdown text={message.content} />}
@@ -41,7 +45,7 @@ export function ChatMessage({ message, note }: ChatMessageProps) {
               {timeFormat.format(new Date(message.createdAt))}
             </time>
           ))}
-        {/* PHASE 8: the speaker button goes here, on answers only (!isUser): it reads message.content aloud with speechSynthesis. */}
+        {speech && <SpeakButton {...speech} />}
       </div>
     </li>
   );

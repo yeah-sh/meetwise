@@ -1,8 +1,9 @@
 "use client";
 
 // A spoken chat question, from the mic button to text: records it (useVoiceRecorder), sends the
-// recording to POST /api/transcribe-question, and passes the text to onText. Escape cancels a
-// recording, or a transcription still in progress. Used by the chat panel (MeetingChat).
+// recording to POST /api/transcribe-question, and passes the text to onText. onStart is called when a
+// recording starts. Escape cancels a recording, or a transcription still in progress. Used by the chat
+// panel (MeetingChat).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVoiceRecorder, type Recording } from "@/hooks/use-voice-recorder";
 import { errorText, readJson } from "@/lib/api-client";
@@ -26,7 +27,7 @@ const EXTENSIONS: Record<string, string> = {
   "audio/wave": "wav",
 };
 
-export function useVoiceQuestion(onText: (text: string) => void) {
+export function useVoiceQuestion(onText: (text: string) => void, onStart?: () => void) {
   const [transcribing, setTranscribing] = useState(false);
   const [transcribeError, setTranscribeError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -67,7 +68,7 @@ export function useVoiceQuestion(onText: (text: string) => void) {
     }
   }
 
-  const recorder = useVoiceRecorder({ maxSeconds: MAX_VOICE_SECONDS, onRecorded: transcribe });
+  const recorder = useVoiceRecorder({ maxSeconds: MAX_VOICE_SECONDS, onRecorded: transcribe, onStart });
   const { isStarting, isRecording, cancel: cancelRecording, clearError: clearRecorderError } = recorder;
   const phase: VoicePhase = isStarting ? "starting" : isRecording ? "recording" : transcribing ? "transcribing" : "idle";
 

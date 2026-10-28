@@ -48,6 +48,21 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* The moving bars on a chat answer while it is read aloud (SpeakButton). */
+@theme {
+  --animate-sound-bar: sound-bar 0.9s ease-in-out infinite;
+
+  @keyframes sound-bar {
+    0%,
+    100% {
+      transform: scaleY(0.35);
+    }
+    50% {
+      transform: scaleY(1);
+    }
+  }
+}
+
 /* MeetWise colours: shadcn's neutral palette with an indigo brand colour (primary and ring).
    color-scheme makes native controls such as the audio player follow the theme. */
 :root {

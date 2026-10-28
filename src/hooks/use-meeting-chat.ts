@@ -4,17 +4,29 @@
 // database holds: the page's initial list, then the saved messages POST /api/meetings/[id]/chat
 // returns. The only local copy is `unsent`, a question the server has not confirmed saving: shown
 // while it is being sent, and kept with the error (and Retry) if it never got saved.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { errorText, readJson } from "@/lib/api-client";
 import type { ChatErrorResponse, ChatMessageView, ChatReply, InputMode } from "@/types";
 
 export type PendingQuestion = { content: string; inputMode: InputMode };
 
-export function useMeetingChat(meetingId: string, initialMessages: ChatMessageView[]) {
+// The chat panel uses these to stop reading an answer aloud when a question goes out, and to read
+// a new answer aloud.
+type ChatEvents = {
+  onSend?: () => void;
+  onAnswer?: (answer: ChatMessageView, inputMode: InputMode) => void; // inputMode of its question
+};
+
+export function useMeetingChat(meetingId: string, initialMessages: ChatMessageView[], events: ChatEvents = {}) {
   const [messages, setMessages] = useState(initialMessages);
   const [unsent, setUnsent] = useState<PendingQuestion | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const eventsRef = useRef(events);
+
+  useEffect(() => {
+    eventsRef.current = events;
+  });
 
   const chatUrl = `/api/meetings/${encodeURIComponent(meetingId)}/chat`;
   const newest = messages.at(-1);
@@ -27,6 +39,7 @@ export function useMeetingChat(meetingId: string, initialMessages: ChatMessageVi
   async function send(question: string, inputMode: InputMode = "TEXT") {
     const content = question.trim();
     if (!content || sending) return;
+    eventsRef.current.onSend?.();
     // Asking the newest, unanswered question again: the server answers that saved message instead
     // of saving a copy, so no second bubble is shown for it.
     const askingSavedAgain = newest?.role === "USER" && newest.content === content;
@@ -51,6 +64,7 @@ export function useMeetingChat(meetingId: string, initialMessages: ChatMessageVi
         throw new Error(body?.error ?? `The server answered with HTTP ${response.status}.`);
       }
       setMessages((list) => upsert(list, answer));
+      eventsRef.current.onAnswer?.(answer, inputMode);
     } catch (sendFailure) {
       setError(errorText(sendFailure));
     } finally {

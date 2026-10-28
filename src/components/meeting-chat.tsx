@@ -4,17 +4,23 @@
 // to POST /api/meetings/[id]/chat, where the Q&A flow in Langflow answers them only from this meeting's
 // transcript. Shows the saved chat with the newest message in view, suggested questions while the chat
 // is empty, a typing indicator while waiting, and failures inline with Retry. Questions can also be
-// spoken with the mic button: they are transcribed, then sent with inputMode "VOICE".
+// spoken with the mic button: they are transcribed, then sent with inputMode "VOICE". Answers can be
+// read aloud by the browser (speaker button on each answer, settings behind the gear); a new answer
+// is read out automatically after a spoken question unless the settings say otherwise.
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CircleAlert, LoaderCircle, MessagesSquare, RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
 import { ChatMessage, TypingIndicator } from "@/components/chat-message";
+import { ChatSettings } from "@/components/chat-settings";
 import { ClearChatButton } from "@/components/clear-chat-button";
 import { MicButton, VoiceStatus } from "@/components/mic-button";
+import type { AnswerSpeech } from "@/components/speak-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMeetingChat, type PendingQuestion } from "@/hooks/use-meeting-chat";
+import { useSpeech } from "@/hooks/use-speech";
+import { useSpeechSettings } from "@/hooks/use-speech-settings";
 import { useStoredFlag } from "@/hooks/use-stored-flag";
 import { useVoiceQuestion } from "@/hooks/use-voice-question";
 import { MAX_QUESTION_LENGTH } from "@/lib/chat-questions";
@@ -45,12 +51,18 @@ export function MeetingChat({ status, ...chatProps }: MeetingChatProps) {
 }
 
 function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps, "status">) {
-  const { messages, unsent, sending, error, retryQuestion, send, clear } = useMeetingChat(meetingId, initialMessages);
+  const speechSettings = useSpeechSettings();
+  const speech = useSpeech(speechSettings);
+  // Any new question, typed or spoken, silences the answer being read.
+  const { messages, unsent, sending, error, retryQuestion, send, clear } = useMeetingChat(meetingId, initialMessages, {
+    onSend: speech.stop,
+    onAnswer: readAloudIfWanted,
+  });
   const [draft, setDraft] = useState("");
   // "VOICE" while the box holds a transcribed question, so it is saved as asked by voice even if edited.
   const [draftMode, setDraftMode] = useState<InputMode>("TEXT");
   const [reviewVoice, setReviewVoice] = useStoredFlag(REVIEW_VOICE_KEY);
-  const voice = useVoiceQuestion(handleTranscribed);
+  const voice = useVoiceQuestion(handleTranscribed, speech.stop);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrolledOnce = useRef(false);
@@ -112,6 +124,30 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
     inputRef.current?.focus({ preventScroll: true });
   }
 
+  // New answers only (not the saved chat on page load), after the kind of question the settings ask
+  // for: by default only spoken ones.
+  function readAloudIfWanted(answer: ChatMessageView, inputMode: InputMode) {
+    const wanted = inputMode === "VOICE" ? speechSettings.autoReadSpoken : speechSettings.autoReadTyped;
+    if (wanted) speech.speak(answer.id, answer.content, { auto: true });
+  }
+
+  // The speaker button's state for an answer; none where the browser cannot speak.
+  function speechFor(message: ChatMessageView): AnswerSpeech | undefined {
+    if (!speech.supported || message.role !== "ASSISTANT") return undefined;
+    const speaking = speech.speakingId === message.id;
+    return {
+      speaking,
+      problem: speech.problem?.id === message.id ? speech.problem.kind : null,
+      onToggle: () => (speaking ? speech.stop() : speech.speak(message.id, message.content)),
+    };
+  }
+
+  // The bubble being read (and its Stop button) is about to disappear.
+  function clearChat() {
+    speech.stop();
+    return clear();
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     submitDraft();
@@ -131,7 +167,8 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
   return (
     <>
       <PanelHeader>
-        <ClearChatButton onClear={clear} disabled={sending || messages.length === 0} />
+        {speech.supported && <ChatSettings settings={speechSettings} speech={speech} />}
+        <ClearChatButton onClear={clearChat} disabled={sending || messages.length === 0} />
       </PanelHeader>
 
       <div
@@ -146,7 +183,7 @@ function Chat({ meetingId, initialMessages, suggestions }: Omit<MeetingChatProps
         ) : (
           <ol className="flex flex-col gap-4">
             {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
+              <ChatMessage key={message.id} message={message} speech={speechFor(message)} />
             ))}
             {unsent && <ChatMessage message={{ role: "USER", ...unsent }} note={sending ? "Sending…" : "Not sent"} />}
             {sending && <TypingIndicator />}
