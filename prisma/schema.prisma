@@ -1,0 +1,98 @@
+// MeetWise database schema (PostgreSQL, database: meeting_app).
+// Prisma 7 does not allow `url` here: the connection URL is set in prisma.config.ts
+// (datasource.url = env("DATABASE_URL"), loaded from .env.local) and, at runtime,
+// passed to PrismaClient through the pg adapter in src/lib/db.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MeetingStatus {
+  UPLOADED
+  TRANSCRIBING
+  ANALYSING
+  READY
+  FAILED
+}
+
+enum ReportCategory {
+  TASK
+  DECISION
+  QUESTION
+  INSIGHT
+  DEADLINE
+  ATTENDEE
+  FOLLOW_UP
+  RISK
+  AGENDA
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
+
+enum InputMode {
+  TEXT
+  VOICE
+}
+
+// One uploaded recording and everything generated from it.
+model Meeting {
+  id             String        @id @default(cuid())
+  title          String
+  description    String?
+  status         MeetingStatus @default(UPLOADED)
+  errorMessage   String? // set when status is FAILED
+  audioFileName  String // original name shown to the user
+  audioPath      String // where the file lives under storage/uploads
+  audioMimeType  String
+  audioSizeBytes Int
+  transcript     String?       @db.Text
+  summary        String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  reportItems  ReportItem[]
+  chatMessages ChatMessage[]
+}
+
+// One entry in a report section (a task, a decision, an attendee, ...).
+model ReportItem {
+  id        String         @id @default(cuid())
+  meetingId String
+  category  ReportCategory
+  text      String
+  owner     String?
+  dueDate   DateTime?
+  status    String? // e.g. "answered" / "unanswered" for questions
+  detail    String?        @db.Text // e.g. an answer, an impact or a role
+  position  Int // order within the meeting's report
+  createdAt DateTime       @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  // PostgreSQL does not index foreign keys automatically.
+  @@index([meetingId])
+}
+
+// One turn in the chat about a meeting.
+model ChatMessage {
+  id        String    @id @default(cuid())
+  meetingId String
+  role      ChatRole
+  content   String    @db.Text
+  inputMode InputMode @default(TEXT)
+  createdAt DateTime  @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  // Loads a meeting's chat in order. Also serves lookups by meetingId alone,
+  // so a separate @@index([meetingId]) would only add write overhead.
+  @@index([meetingId, createdAt])
+}

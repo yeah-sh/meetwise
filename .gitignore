@@ -41,6 +41,9 @@ yarn-error.log*
 /storage/uploads/*
 !/storage/uploads/.gitkeep
 
+# Prisma Client (recreate with `npx prisma generate`)
+/src/generated/
+
 # vercel
 .vercel
 
