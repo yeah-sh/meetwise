@@ -1,9 +1,10 @@
 "use client";
 
 // The speaker button under an answer in the chat panel: reads the answer aloud, or stops it. While the
-// answer is being read it shows moving bars and "Stop". If the browser refused to start an answer read
-// out automatically, "Tap to hear the answer" takes its place. State comes from useSpeech (MeetingChat).
+// answer is being read it shows the moving waveform and "Stop". If the browser refused to start an answer
+// read out automatically, "Tap to hear the answer" takes its place. State comes from useSpeech (MeetingChat).
 import { Volume2 } from "lucide-react";
+import { WaveformMark } from "@/components/brand/waveform";
 import { Button } from "@/components/ui/button";
 import type { SpeechProblem } from "@/hooks/use-speech";
 import { cn } from "@/lib/utils";
@@ -50,17 +51,12 @@ export function SpeakButton({ speaking, problem, onToggle }: AnswerSpeech) {
   );
 }
 
-// Three bars moving like a level meter (still when the user prefers reduced motion).
+// The waveform mark with its bars moving like a level meter (still when the user prefers reduced
+// motion). The size-3 class keeps the button's own icon size rule from resizing it.
 function SoundBars() {
   return (
-    <span aria-hidden data-icon="inline-start" className="flex h-3 items-center gap-0.5">
-      {[0, 1, 2].map((bar) => (
-        <span
-          key={bar}
-          className="h-full w-0.5 animate-sound-bar rounded-full bg-current motion-reduce:animate-none"
-          style={{ animationDelay: `${bar * 150}ms` }}
-        />
-      ))}
+    <span aria-hidden data-icon="inline-start" className="flex">
+      <WaveformMark width={12} height={12} className="size-3 wave-moving" />
     </span>
   );
 }

@@ -1,6 +1,8 @@
 // /: what MeetWise does, with a button to upload a meeting.
 import Link from "next/link";
 import { ListChecks, MessagesSquare, Upload, type LucideIcon } from "lucide-react";
+import { HeroIllustration } from "@/components/brand/hero-illustration";
+import { WaveDivider } from "@/components/brand/wave-divider";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +27,14 @@ const STEPS: { icon: LucideIcon; title: string; text: string }[] = [
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
-      {/* A soft glow of the brand colour behind the headline. */}
-      <section className="bg-[radial-gradient(60%_60%_at_50%_0%,color-mix(in_oklch,var(--primary)_14%,transparent),transparent)]">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 pt-16 pb-12 text-center sm:pt-24 sm:pb-16">
+      {/* The headline beside the hero drawing (a recording turning into report cards); on phones
+          the drawing comes after the buttons. */}
+      <section className="mx-auto grid w-full max-w-5xl items-center gap-10 px-4 pt-14 pb-12 sm:pt-20 md:grid-cols-2 md:gap-8 md:pb-16">
+        <div className="flex flex-col items-center gap-6 text-center md:items-start md:text-left">
           <span className="rounded-full border bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground">
             Your AI meeting assistant
           </span>
-          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl md:text-4xl lg:text-5xl">
             Turn meeting recordings into clear, actionable reports
           </h1>
           <p className="max-w-xl text-base text-pretty text-muted-foreground sm:text-lg">
@@ -48,9 +51,12 @@ export default function Home() {
             </Link>
           </div>
         </div>
+        <HeroIllustration className="mx-auto h-auto w-full max-w-lg" />
       </section>
 
-      <section aria-label="How it works" className="mx-auto w-full max-w-5xl px-4 pb-16">
+      <WaveDivider className="mx-auto w-full max-w-5xl px-4" />
+
+      <section aria-label="How it works" className="mx-auto w-full max-w-5xl px-4 pt-10 pb-16">
         <ol className="grid gap-4 sm:grid-cols-3">
           {STEPS.map(({ icon: Icon, title, text }, index) => (
             <li key={title} className="flex flex-col gap-3 rounded-xl bg-card p-5 ring-1 ring-foreground/10">

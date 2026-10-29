@@ -9,6 +9,7 @@
 // is read out automatically after a spoken question unless the settings say otherwise.
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { CircleAlert, LoaderCircle, MessagesSquare, RotateCcw, SendHorizontal, Sparkles } from "lucide-react";
+import { UnpluggedMic } from "@/components/brand/unplugged-mic";
 import { ChatMessage, TypingIndicator } from "@/components/chat-message";
 import { ChatSettings } from "@/components/chat-settings";
 import { ClearChatButton } from "@/components/clear-chat-button";
@@ -40,10 +41,13 @@ type MeetingChatProps = {
 };
 
 export function MeetingChat({ status, ...chatProps }: MeetingChatProps) {
+  // min-h: on short screens (a phone in landscape) the header and a grown question box would
+  // otherwise fill the fixed height, and overflow-hidden would cut off the Send button.
+  // dvh, not vh: on tablets 100vh reaches under the browser's toolbar.
   return (
     <aside
       aria-label="Chat with this meeting"
-      className="flex h-[min(40rem,85dvh)] flex-col overflow-hidden rounded-xl bg-card text-sm text-card-foreground ring-1 ring-foreground/10 lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)]"
+      className="flex h-[min(40rem,85dvh)] min-h-[26rem] flex-col overflow-hidden rounded-xl bg-card text-sm text-card-foreground ring-1 ring-foreground/10 lg:sticky lg:top-20 lg:h-[calc(100dvh-7rem)]"
     >
       {status === "READY" ? <Chat {...chatProps} /> : <ChatUnavailable failed={status === "FAILED"} />}
     </aside>
@@ -296,7 +300,7 @@ function ChatProblem({ error, onRetry }: { error: string | null; onRetry?: () =>
         error ? "bg-destructive/10 text-destructive" : "bg-muted/60 text-muted-foreground",
       )}
     >
-      <p className="flex gap-2 text-pretty break-words">
+      <p className="flex gap-2 text-pretty wrap-anywhere">
         <CircleAlert className="mt-0.5 size-4 shrink-0" />
         {error ?? "This question has no answer yet."}
       </p>
@@ -315,11 +319,7 @@ function ChatUnavailable({ failed }: { failed: boolean }) {
     <>
       <PanelHeader />
       <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-        {failed ? (
-          <CircleAlert className="size-5 text-muted-foreground" />
-        ) : (
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground motion-reduce:animate-none" />
-        )}
+        <UnpluggedMic className="mb-2 w-32 text-muted-foreground" />
         <p className="font-medium">{failed ? "Chat is not available" : "The chat opens when the report is ready"}</p>
         <p className="max-w-64 text-pretty text-muted-foreground">
           {failed

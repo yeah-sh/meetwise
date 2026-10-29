@@ -1,9 +1,11 @@
 // /meetings: every meeting, newest first, as cards with status and report counts.
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileMusic, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
+import { BlankMinuteBook } from "@/components/brand/minute-book";
 import { MeetingCard } from "@/components/meeting-card";
 import { RefreshWhileProcessing } from "@/components/refresh-while-processing";
+import { StateMessage } from "@/components/state-message";
 import { buttonVariants } from "@/components/ui/button";
 import { plural } from "@/lib/format";
 import { isProcessing } from "@/lib/meeting-status";
@@ -50,22 +52,22 @@ export default async function MeetingsPage() {
   );
 }
 
+// The dashed frame marks the space where the meeting cards will appear.
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <FileMusic className="size-6" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <h2 className="font-medium">No meetings yet</h2>
-        <p className="max-w-sm text-sm text-muted-foreground">
-          Upload a recording to get a transcript and a structured report you can search and ask questions about.
-        </p>
-      </div>
-      <Link href="/upload" className={buttonVariants()}>
-        <Upload data-icon="inline-start" />
-        Upload a meeting
-      </Link>
+    <div className="rounded-xl border border-dashed">
+      <StateMessage
+        illustration={<BlankMinuteBook className="w-40 text-muted-foreground" />}
+        title="No meetings yet"
+        action={
+          <Link href="/upload" className={buttonVariants()}>
+            <Upload data-icon="inline-start" />
+            Upload a meeting
+          </Link>
+        }
+      >
+        Upload a recording to get a transcript and a structured report you can search and ask questions about.
+      </StateMessage>
     </div>
   );
 }

@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import Markdown, { type Components } from "react-markdown";
 import { Mic } from "lucide-react";
+import { WaveDivider } from "@/components/brand/wave-divider";
 import { SpeakButton, type AnswerSpeech } from "@/components/speak-button";
 import { cn } from "@/lib/utils";
 import type { ChatMessageView } from "@/types";
@@ -20,12 +21,22 @@ type ChatMessageProps = {
 
 export function ChatMessage({ message, note, speech }: ChatMessageProps) {
   const isUser = message.role === "USER";
+  // A new answer settles in (fades and rises) as it mounts. Only the last item in the list: on page
+  // load that keeps the saved chat still apart from its latest answer.
   return (
-    <li className={cn("flex max-w-[88%] flex-col gap-1", isUser ? "items-end self-end" : "items-start self-start")}>
+    <li
+      className={cn(
+        "flex max-w-[88%] flex-col gap-1",
+        isUser ? "items-end self-end" : "items-start self-start motion-safe:last:animate-settle-in",
+      )}
+    >
       <span className="sr-only">{isUser ? "You asked:" : "MeetWise answered:"}</span>
+      {/* The bubble is sized to its content. max-w-full keeps a long code line inside it (the code
+          block scrolls instead), and wrap-anywhere lets a long URL or word wrap: break-words alone
+          still lets it set the bubble's minimum width and push it past the panel. */}
       <div
         className={cn(
-          "min-w-0 rounded-2xl px-3.5 py-2.5 break-words",
+          "max-w-full min-w-0 rounded-2xl px-3.5 py-2.5 wrap-anywhere",
           isUser ? "rounded-br-md bg-primary whitespace-pre-wrap text-primary-foreground" : "rounded-bl-md bg-muted",
           speech?.speaking && "ring-2 ring-primary/40",
         )}
@@ -109,7 +120,7 @@ const MARKDOWN_COMPONENTS: Components = {
   blockquote: ({ children }) => (
     <blockquote className="border-l-2 border-foreground/20 pl-3 text-muted-foreground">{children}</blockquote>
   ),
-  hr: () => <hr className="border-foreground/15" />,
+  hr: () => <WaveDivider className="text-foreground/15" />,
   h1: Heading,
   h2: Heading,
   h3: Heading,

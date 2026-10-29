@@ -1,12 +1,14 @@
 // One meeting in the /meetings list. The whole card links to the meeting (the title link is
 // stretched over it with ::after); the delete button sits above that link so it stays clickable.
 import Link from "next/link";
-import { Gavel, ListTodo, LoaderCircle, TriangleAlert, type LucideIcon } from "lucide-react";
+import { Gavel, ListTodo, TriangleAlert, type LucideIcon } from "lucide-react";
+import { WaveformMark } from "@/components/brand/waveform";
 import { DeleteMeetingButton } from "@/components/delete-meeting-button";
 import { StatusBadge } from "@/components/status-badge";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, plural } from "@/lib/format";
 import type { MeetingListItem } from "@/lib/meetings";
+import { cn } from "@/lib/utils";
 
 export function MeetingCard({ meeting }: { meeting: MeetingListItem }) {
   const { id, title, description, status, errorMessage, createdAt, counts } = meeting;
@@ -30,16 +32,17 @@ export function MeetingCard({ meeting }: { meeting: MeetingListItem }) {
 
       <CardContent className="mt-auto">
         {status === "READY" ? (
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground" aria-label="Report contents">
-            <Count icon={ListTodo} text={plural(counts.tasks, "task")} />
-            <Count icon={Gavel} text={plural(counts.decisions, "decision")} />
-            <Count icon={TriangleAlert} text={plural(counts.risks, "risk")} />
+          <ul className="flex flex-wrap gap-1.5 text-sm" aria-label="Report contents">
+            <Count icon={ListTodo} count={counts.tasks} noun="task" tint="bg-cat-task/15 text-cat-task-foreground" />
+            <Count icon={Gavel} count={counts.decisions} noun="decision" tint="bg-cat-decision/15 text-cat-decision-foreground" />
+            <Count icon={TriangleAlert} count={counts.risks} noun="risk" tint="bg-cat-risk/15 text-cat-risk-foreground" />
           </ul>
         ) : status === "FAILED" ? (
           <p className="line-clamp-2 text-sm text-destructive">{errorMessage ?? "Processing failed."}</p>
         ) : (
+          // A still waveform: the status badge's live dot already shows the work going on.
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <LoaderCircle className="size-3.5 animate-spin" />
+            <WaveformMark width={14} height={14} className="shrink-0" />
             The report will appear when processing finishes.
           </p>
         )}
@@ -48,11 +51,18 @@ export function MeetingCard({ meeting }: { meeting: MeetingListItem }) {
   );
 }
 
-function Count({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
+// A count as a pill tinted with its category's colour (cat-* tokens in globals.css); a zero is only
+// outlined and muted, so the counts that matter stand out.
+function Count({ icon: Icon, count, noun, tint }: { icon: LucideIcon; count: number; noun: string; tint: string }) {
   return (
-    <li className="flex items-center gap-1.5">
+    <li
+      className={cn(
+        "flex items-center gap-1.5 rounded-full px-2 py-0.5",
+        count === 0 ? "text-muted-foreground ring-1 ring-border ring-inset" : `font-medium ${tint}`,
+      )}
+    >
       <Icon className="size-3.5" />
-      {text}
+      {plural(count, noun)}
     </li>
   );
 }

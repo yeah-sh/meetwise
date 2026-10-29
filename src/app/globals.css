@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-serif: var(--font-newsreader);
+  --font-heading: var(--font-newsreader);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +40,39 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-signal: var(--signal);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-status-uploaded: var(--status-uploaded);
+  --color-status-uploaded-foreground: var(--status-uploaded-foreground);
+  --color-status-processing: var(--status-processing);
+  --color-status-processing-foreground: var(--status-processing-foreground);
+  --color-status-ready: var(--status-ready);
+  --color-status-ready-foreground: var(--status-ready-foreground);
+  --color-status-failed: var(--status-failed);
+  --color-status-failed-foreground: var(--status-failed-foreground);
+  --color-cat-task: var(--cat-task);
+  --color-cat-task-foreground: var(--cat-task-foreground);
+  --color-cat-follow-up: var(--cat-follow-up);
+  --color-cat-follow-up-foreground: var(--cat-follow-up-foreground);
+  --color-cat-deadline: var(--cat-deadline);
+  --color-cat-deadline-foreground: var(--cat-deadline-foreground);
+  --color-cat-decision: var(--cat-decision);
+  --color-cat-decision-foreground: var(--cat-decision-foreground);
+  --color-cat-insight: var(--cat-insight);
+  --color-cat-insight-foreground: var(--cat-insight-foreground);
+  --color-cat-question: var(--cat-question);
+  --color-cat-question-foreground: var(--cat-question-foreground);
+  --color-cat-risk: var(--cat-risk);
+  --color-cat-risk-foreground: var(--cat-risk-foreground);
+  --color-cat-attendee: var(--cat-attendee);
+  --color-cat-attendee-foreground: var(--cat-attendee-foreground);
+  --color-cat-agenda: var(--cat-agenda);
+  --color-cat-agenda-foreground: var(--cat-agenda-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-active: var(--highlight-active);
+  --color-highlight-active-foreground: var(--highlight-active-foreground);
+  --shadow-card: var(--shadow-card);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -48,92 +82,282 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* The moving bars on a chat answer while it is read aloud (SpeakButton). */
+/* Motion. Short and CSS-only, and still when the user prefers reduced motion: components add these
+   animate-* classes with motion-safe:, and wave-moving below checks it itself. */
 @theme {
-  --animate-sound-bar: sound-bar 0.9s ease-in-out infinite;
+  /* The amber "live" dot on an in-progress status badge (StatusBadge): the app's only ambient loop. */
+  --animate-live-breathe: live-breathe 2.4s ease-in-out infinite;
+  /* A new chat answer fading and rising into place (ChatMessage). */
+  --animate-settle-in: settle-in 280ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  /* A report section lit briefly when a section link jumps to it, via :target (MeetingReport). */
+  --animate-section-flash: section-flash 380ms ease-out;
 
-  @keyframes sound-bar {
-    0%,
-    100% {
-      transform: scaleY(0.35);
-    }
+  @keyframes live-breathe {
     50% {
-      transform: scaleY(1);
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
+  }
+  /* No "to" frame: each ends on the element's own styles. */
+  @keyframes settle-in {
+    from {
+      opacity: 0;
+      transform: translateY(0.375rem);
+    }
+  }
+  @keyframes section-flash {
+    0%,
+    30% {
+      background-color: color-mix(in oklch, var(--highlight) 75%, var(--card));
     }
   }
 }
 
-/* MeetWise colours: shadcn's neutral palette with an indigo brand colour (primary and ring).
-   color-scheme makes native controls such as the audio player follow the theme. */
+/* Waveform bars rising and falling in turn, like a level meter: the processing steps while work is
+   under way, and the speaker button while an answer is read aloud. Waveform gives each bar its
+   --wave-i, which staggers it. */
+@utility wave-moving {
+  @media (prefers-reduced-motion: no-preference) {
+    & rect {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: wave-bar 1.2s ease-in-out infinite;
+      animation-delay: calc(var(--wave-i, 0) * -0.13s);
+    }
+  }
+}
+
+@keyframes wave-bar {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.4);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+   MeetWise design tokens. Light is "paper and ink", dark is "blue-slate". Every colour decision
+   lives here; components use the token classes and never raw palette classes (sky-500 etc).
+
+   Surfaces and text (shadcn names, kept so every ui/ component works):
+     background (page paper), card and popover (a touch lighter in light, lighter slate in dark),
+     foreground (ink), muted / muted-foreground (quiet fills and secondary text, AA on all
+     surfaces), secondary and accent (hover and chip fills), border (decorative lines),
+     input (form control edges, 3:1 against the page so fields are identifiable).
+   Brand: primary and ring are teal. primary-foreground is text on a solid primary fill.
+   Destructive: red for delete and errors; used as text and as a light tint.
+   Signal: amber for attention and "live" moments only (unanswered, listening, the moment
+     something needs the user). Not for decoration.
+   Status: status-uploaded, status-processing (transcribing and analysing), status-ready,
+     status-failed. Use as a tinted badge: bg-status-ready/15 text-status-ready-foreground.
+   Categories: one colour per report category, grouped so related items look related:
+     actions (cat-task, cat-follow-up, cat-deadline) teal to blue;
+     outcomes (cat-decision, cat-insight) green and violet;
+     open issues (cat-question, cat-risk) amber and red;
+     people and structure (cat-attendee, cat-agenda) quiet rose and slate.
+   Highlight: transcript search. highlight marks every match, highlight-active the current one.
+
+   How the -foreground pairs work:
+     signal, status-* and cat-*: the base colour is for tints (/15), dots, icons and borders;
+     -foreground is for text on that /15 tint or straight on the page. Never put -foreground
+     text on a solid base fill: it is not tuned for that.
+     highlight and highlight-active are solid fills; their -foreground is text on that fill.
+
+   Shape and depth: --radius drives every rounded-* class; shadow-card is the soft card shadow.
+   Type: font-heading (Newsreader serif) for page titles and card titles; Geist for everything
+     else. The type-* utilities below bundle size, line height and weight. They are not named
+     text-* on purpose: cn() would read an unknown text-* class as a colour and drop the real one.
+   --------------------------------------------------------------------------------------------- */
 :root {
   color-scheme: light;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.511 0.262 276.966);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.673 0.182 276.935);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.511 0.262 276.966);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: oklch(0.975 0.006 240);
+  --foreground: oklch(0.26 0.03 255);
+  --card: oklch(0.993 0.003 240);
+  --card-foreground: oklch(0.26 0.03 255);
+  --popover: oklch(0.993 0.003 240);
+  --popover-foreground: oklch(0.26 0.03 255);
+  --primary: oklch(0.44 0.075 190);
+  --primary-foreground: oklch(0.985 0.008 190);
+  --secondary: oklch(0.945 0.01 240);
+  --secondary-foreground: oklch(0.3 0.03 255);
+  --muted: oklch(0.945 0.01 240);
+  --muted-foreground: oklch(0.5 0.025 255);
+  --accent: oklch(0.94 0.014 210);
+  --accent-foreground: oklch(0.3 0.03 255);
+  --destructive: oklch(0.48 0.18 25);
+  --border: oklch(0.9 0.012 245);
+  --input: oklch(0.64 0.025 250);
+  --ring: oklch(0.56 0.1 190);
+  --chart-1: oklch(0.56 0.1 190);
+  --chart-2: oklch(0.56 0.12 240);
+  --chart-3: oklch(0.56 0.15 298);
+  --chart-4: oklch(0.65 0.15 66);
+  --chart-5: oklch(0.6 0.08 10);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.993 0.003 240);
+  --sidebar-foreground: oklch(0.26 0.03 255);
+  --sidebar-primary: oklch(0.44 0.075 190);
+  --sidebar-primary-foreground: oklch(0.985 0.008 190);
+  --sidebar-accent: oklch(0.94 0.014 210);
+  --sidebar-accent-foreground: oklch(0.3 0.03 255);
+  --sidebar-border: oklch(0.9 0.012 245);
+  --sidebar-ring: oklch(0.56 0.1 190);
+
+  --signal: oklch(0.65 0.16 62);
+  --signal-foreground: oklch(0.47 0.12 55);
+
+  --status-uploaded: oklch(0.56 0.03 255);
+  --status-uploaded-foreground: oklch(0.42 0.03 255);
+  --status-processing: oklch(0.58 0.15 255);
+  --status-processing-foreground: oklch(0.45 0.14 258);
+  --status-ready: oklch(0.6 0.13 155);
+  --status-ready-foreground: oklch(0.44 0.1 155);
+  --status-failed: oklch(0.56 0.19 25);
+  --status-failed-foreground: oklch(0.47 0.17 25);
+
+  --cat-task: oklch(0.58 0.1 188);
+  --cat-task-foreground: oklch(0.44 0.08 190);
+  --cat-follow-up: oklch(0.58 0.11 228);
+  --cat-follow-up-foreground: oklch(0.45 0.1 232);
+  --cat-deadline: oklch(0.56 0.15 262);
+  --cat-deadline-foreground: oklch(0.45 0.15 264);
+  --cat-decision: oklch(0.58 0.13 152);
+  --cat-decision-foreground: oklch(0.44 0.11 152);
+  --cat-insight: oklch(0.56 0.16 298);
+  --cat-insight-foreground: oklch(0.46 0.16 298);
+  --cat-question: oklch(0.65 0.15 66);
+  --cat-question-foreground: oklch(0.47 0.11 60);
+  --cat-risk: oklch(0.57 0.19 25);
+  --cat-risk-foreground: oklch(0.48 0.17 25);
+  --cat-attendee: oklch(0.6 0.08 10);
+  --cat-attendee-foreground: oklch(0.47 0.08 10);
+  --cat-agenda: oklch(0.56 0.035 255);
+  --cat-agenda-foreground: oklch(0.43 0.035 255);
+
+  --highlight: oklch(0.93 0.085 95);
+  --highlight-foreground: oklch(0.26 0.03 255);
+  --highlight-active: oklch(0.78 0.15 65);
+  --highlight-active-foreground: oklch(0.22 0.04 50);
+
+  --shadow-card: 0 1px 2px oklch(0.35 0.03 255 / 6%), 0 4px 12px -4px oklch(0.35 0.03 255 / 10%);
+
+  /* Type scale sizes; the type-* utilities below use them. */
+  --type-display: clamp(1.75rem, 1.35rem + 1.6vw, 2.25rem);
+  --type-title: 1.125rem;
+  --type-section: 1rem;
+  --type-body: 0.9375rem;
+  --type-meta: 0.75rem;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.673 0.182 276.935);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.585 0.233 277.117);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.235 0.028 256);
+  --foreground: oklch(0.945 0.008 250);
+  --card: oklch(0.27 0.03 256);
+  --card-foreground: oklch(0.945 0.008 250);
+  --popover: oklch(0.29 0.03 256);
+  --popover-foreground: oklch(0.945 0.008 250);
+  --primary: oklch(0.76 0.12 184);
+  --primary-foreground: oklch(0.21 0.035 230);
+  --secondary: oklch(0.32 0.03 256);
+  --secondary-foreground: oklch(0.945 0.008 250);
+  --muted: oklch(0.31 0.03 256);
+  --muted-foreground: oklch(0.745 0.025 250);
+  --accent: oklch(0.33 0.035 230);
+  --accent-foreground: oklch(0.945 0.008 250);
+  --destructive: oklch(0.79 0.13 22);
+  --border: oklch(0.85 0.03 250 / 12%);
+  --input: oklch(0.85 0.03 250 / 45%);
+  --ring: oklch(0.7 0.11 185);
+  --chart-1: oklch(0.76 0.12 184);
+  --chart-2: oklch(0.72 0.11 240);
+  --chart-3: oklch(0.74 0.13 298);
+  --chart-4: oklch(0.8 0.14 75);
+  --chart-5: oklch(0.75 0.07 10);
+  --sidebar: oklch(0.27 0.03 256);
+  --sidebar-foreground: oklch(0.945 0.008 250);
+  --sidebar-primary: oklch(0.76 0.12 184);
+  --sidebar-primary-foreground: oklch(0.21 0.035 230);
+  --sidebar-accent: oklch(0.33 0.035 230);
+  --sidebar-accent-foreground: oklch(0.945 0.008 250);
+  --sidebar-border: oklch(0.85 0.03 250 / 12%);
+  --sidebar-ring: oklch(0.7 0.11 185);
+
+  --signal: oklch(0.8 0.15 75);
+  --signal-foreground: oklch(0.87 0.11 82);
+
+  --status-uploaded: oklch(0.7 0.03 255);
+  --status-uploaded-foreground: oklch(0.84 0.02 255);
+  --status-processing: oklch(0.72 0.13 250);
+  --status-processing-foreground: oklch(0.85 0.08 250);
+  --status-ready: oklch(0.74 0.14 155);
+  --status-ready-foreground: oklch(0.86 0.1 155);
+  --status-failed: oklch(0.7 0.17 22);
+  --status-failed-foreground: oklch(0.84 0.09 20);
+
+  --cat-task: oklch(0.76 0.11 185);
+  --cat-task-foreground: oklch(0.86 0.07 185);
+  --cat-follow-up: oklch(0.75 0.11 228);
+  --cat-follow-up-foreground: oklch(0.86 0.06 228);
+  --cat-deadline: oklch(0.72 0.13 262);
+  --cat-deadline-foreground: oklch(0.85 0.07 262);
+  --cat-decision: oklch(0.75 0.13 152);
+  --cat-decision-foreground: oklch(0.86 0.08 152);
+  --cat-insight: oklch(0.74 0.13 298);
+  --cat-insight-foreground: oklch(0.86 0.07 298);
+  --cat-question: oklch(0.8 0.14 75);
+  --cat-question-foreground: oklch(0.88 0.09 80);
+  --cat-risk: oklch(0.71 0.16 22);
+  --cat-risk-foreground: oklch(0.85 0.08 22);
+  --cat-attendee: oklch(0.75 0.07 10);
+  --cat-attendee-foreground: oklch(0.87 0.04 10);
+  --cat-agenda: oklch(0.72 0.03 255);
+  --cat-agenda-foreground: oklch(0.86 0.02 255);
+
+  --highlight: oklch(0.46 0.085 88);
+  --highlight-foreground: oklch(0.97 0.012 90);
+  --highlight-active: oklch(0.83 0.15 78);
+  --highlight-active-foreground: oklch(0.2 0.04 60);
+
+  --shadow-card: 0 1px 2px oklch(0.12 0.03 260 / 35%), 0 6px 16px -6px oklch(0.12 0.03 260 / 50%);
+}
+
+/* Type scale: display (page titles), title (card titles), section, body and meta (timestamps,
+   counts). Display and title use the heading serif. Colour is not included: add it separately,
+   for example type-meta text-muted-foreground. Avoid mixing a type-* class with text-sm etc. */
+@utility type-display {
+  @apply font-heading;
+  font-size: var(--type-display);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+@utility type-title {
+  @apply font-heading;
+  font-size: var(--type-title);
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+@utility type-section {
+  font-size: var(--type-section);
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+  font-weight: 600;
+}
+
+@utility type-body {
+  font-size: var(--type-body);
+  line-height: 1.65;
+}
+
+@utility type-meta {
+  font-size: var(--type-meta);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 
 @layer base {
@@ -145,5 +369,9 @@
   }
   html {
     @apply font-sans;
+  }
+  /* Page titles use the heading serif. The h1s live in the page files, so it is set here once. */
+  h1 {
+    @apply font-heading;
   }
 }

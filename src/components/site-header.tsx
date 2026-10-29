@@ -1,7 +1,7 @@
 // The app's top bar: name, section links and the dark-mode toggle. Sticks to the top while scrolling.
 import Link from "next/link";
 import { Suspense } from "react";
-import { AudioLines } from "lucide-react";
+import { WaveformMark } from "@/components/brand/waveform";
 import { NavLinkList, NavLinks } from "@/components/nav-links";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -13,9 +13,8 @@ export function SiteHeader() {
           href="/"
           className="mr-auto flex items-center gap-2 rounded-lg font-semibold tracking-tight outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <AudioLines className="size-4" />
-          </span>
+          {/* The logo mark: the waveform in brand ink. */}
+          <WaveformMark width={23} height={24} className="text-primary" />
           MeetWise
         </Link>
         <nav aria-label="Main" className="flex items-center gap-1">

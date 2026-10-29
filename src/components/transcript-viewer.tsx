@@ -105,25 +105,31 @@ export function TranscriptViewer({ transcript }: { transcript: string }) {
         ref={panelRef}
         tabIndex={0}
         aria-label="Transcript"
-        className="relative max-h-[65vh] overflow-y-auto rounded-xl bg-muted/40 p-4 text-sm leading-7 break-words whitespace-pre-wrap ring-1 ring-foreground/10 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5"
+        className="relative max-h-[65vh] overflow-y-auto rounded-xl bg-muted/40 px-4 py-5 ring-1 ring-foreground/10 outline-none focus-visible:ring-2 focus-visible:ring-ring sm:px-8 sm:py-6"
       >
-        {parts.map((part, index) => {
-          if (index % 2 === 0) return part;
-          const matchIndex = (index - 1) / 2;
-          return (
-            <mark
-              key={index}
-              data-match={matchIndex}
-              className={cn(
-                // The negative margin cancels the padding, so highlighting never moves the text.
-                "-mx-0.5 rounded-sm px-0.5 text-foreground",
-                matchIndex === active ? "bg-orange-400 text-black" : "bg-yellow-200 dark:bg-yellow-400/35",
-              )}
-            >
-              {part}
-            </mark>
-          );
-        })}
+        {/* A centred reading column of about 70 characters a line (rem, not ch: Geist's wide "0" makes
+            ch too long). Not positioned, so the panel stays the marks' offsetParent. */}
+        <div className="mx-auto max-w-[32rem] type-body break-words whitespace-pre-wrap">
+          {parts.map((part, index) => {
+            if (index % 2 === 0) return part;
+            const matchIndex = (index - 1) / 2;
+            return (
+              <mark
+                key={index}
+                data-match={matchIndex}
+                className={cn(
+                  // The negative margin cancels the padding, so highlighting never moves the text.
+                  "-mx-0.5 rounded-sm px-0.5",
+                  matchIndex === active
+                    ? "bg-highlight-active text-highlight-active-foreground"
+                    : "bg-highlight text-highlight-foreground",
+                )}
+              >
+                {part}
+              </mark>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
